@@ -2,16 +2,16 @@ version: "3"
 
 services:
   backend:
-    image: frappe/erpnext-worker:v14.9.0
+    image: marty/erpnext-worker:v14.6.0
     deploy:
       restart_policy:
         condition: on-failure
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - assets:/home/frappe/frappe-bench/sites/assets
+      - t-sites:/home/frappe/frappe-bench/sites
+      - t-assets:/home/frappe/frappe-bench/sites/assets
 
   configurator:
-    image: frappe/erpnext-worker:v14.9.0
+    image: marty/erpnext-worker:v14.6.0
     command:
       - configure.py
     environment:
@@ -22,16 +22,16 @@ services:
       REDIS_SOCKETIO: redis-socketio:6379
       SOCKETIO_PORT: "9000"
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
+      - t-sites:/home/frappe/frappe-bench/sites
 
   create-site:
-    image: frappe/erpnext-worker:v14.9.0
+    image: marty/erpnext-worker:v14.6.0
     deploy:
       restart_policy:
         condition: on-failure
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - assets:/home/frappe/frappe-bench/sites/assets
+      - t-sites:/home/frappe/frappe-bench/sites
+      - t-assets:/home/frappe/frappe-bench/sites/assets
     entrypoint:
       - bash
       - -c
@@ -76,7 +76,7 @@ services:
       - db-data:/var/lib/mysql
 
   frontend:
-    image: frappe/erpnext-nginx:v14.9.0
+    image: marty/erpnext-nginx:v14.6.0
     deploy:
       restart_policy:
         condition: on-failure
@@ -88,13 +88,13 @@ services:
       UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
       UPSTREAM_REAL_IP_RECURSIVE: "off"
     volumes:
-      - sites:/usr/share/nginx/html/sites
-      - assets:/usr/share/nginx/html/assets
+      - t-sites:/usr/share/nginx/html/sites
+      - t-assets:/usr/share/nginx/html/assets
     ports:
       - "8080:8080"
 
   queue-default:
-    image: frappe/erpnext-worker:v14.9.0
+    image: marty/erpnext-worker:v14.6.0
     deploy:
       restart_policy:
         condition: on-failure
@@ -104,11 +104,11 @@ services:
       - --queue
       - default
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - assets:/home/frappe/frappe-bench/sites/assets
+      - t-sites:/home/frappe/frappe-bench/sites
+      - t-assets:/home/frappe/frappe-bench/sites/assets
 
   queue-long:
-    image: frappe/erpnext-worker:v14.9.0
+    image: marty/erpnext-worker:v14.6.0
     deploy:
       restart_policy:
         condition: on-failure
@@ -118,11 +118,11 @@ services:
       - --queue
       - long
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - assets:/home/frappe/frappe-bench/sites/assets
+      - t-sites:/home/frappe/frappe-bench/sites
+      - t-assets:/home/frappe/frappe-bench/sites/assets
 
   queue-short:
-    image: frappe/erpnext-worker:v14.9.0
+    image: marty/erpnext-worker:v14.6.0
     deploy:
       restart_policy:
         condition: on-failure
@@ -132,8 +132,8 @@ services:
       - --queue
       - short
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - assets:/home/frappe/frappe-bench/sites/assets
+      - t-sites:/home/frappe/frappe-bench/sites
+      - t-assets:/home/frappe/frappe-bench/sites/assets
 
   redis-queue:
     image: redis:6.2-alpine
@@ -160,7 +160,7 @@ services:
       - redis-socketio-data:/data
 
   scheduler:
-    image: frappe/erpnext-worker:v14.9.0
+    image: marty/erpnext-worker:v14.6.0
     deploy:
       restart_policy:
         condition: on-failure
@@ -168,8 +168,8 @@ services:
       - bench
       - schedule
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - assets:/home/frappe/frappe-bench/sites/assets
+      - t-sites:/home/frappe/frappe-bench/sites
+      - t-assets:/home/frappe/frappe-bench/sites/assets
 
   websocket:
     image: frappe/frappe-socketio:v14.17.0
@@ -177,13 +177,13 @@ services:
       restart_policy:
         condition: on-failure
     volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - assets:/home/frappe/frappe-bench/sites/assets
+      - t-sites:/home/frappe/frappe-bench/sites
+      - t-assets:/home/frappe/frappe-bench/sites/assets
 
 volumes:
-  assets:
+  t-assets:
   db-data:
   redis-queue-data:
   redis-cache-data:
   redis-socketio-data:
-  sites:
+  t-sites:

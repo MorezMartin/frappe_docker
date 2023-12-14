@@ -1,0 +1,68 @@
+version: "3.7"
+
+networks:
+  frappe-network:
+    name: frappe-network
+    attachable: true
+
+services:
+  mariadb-master:
+    image: 'bitnami/mariadb:10.3'
+    deploy:
+      placement:
+        constraints: [node.hostname == ns3064432]
+      restart_policy:
+        condition: on-failure
+    configs:
+      - source: frappe-mariadb-config_5
+        target: /opt/bitnami/mariadb/conf/bitnami/my_custom.cnf
+    networks:
+      - frappe-network
+    volumes:
+      - 'mariadb_master_data:/bitnami/mariadb/data'
+    environment:
+      - MARIADB_REPLICATION_MODE=master
+      - MARIADB_REPLICATION_USER=repl_user
+      - MYSQL_USER=root
+      - MARIADB_ROOT_PASSWORD=123
+      - MARIADB_REPLICATION_PASSWORD=aquecoucou123
+
+  mariadb-slave:
+    image: 'bitnami/mariadb:10.3'
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.hostname == ns3064432]
+      restart_policy:
+        condition: on-failure
+    configs:
+      - source: frappe-mariadb-config_5
+        target: /opt/bitnami/mariadb/conf/bitnami/my_custom.cnf
+    networks:
+      - frappe-network
+    volumes:
+      - 'mariadb_slave_data:/bitnami/mariadb/data'
+    environment:
+      - MARIADB_REPLICATION_MODE=slave
+      - MARIADB_REPLICATION_USER=repl_user
+      - MARIADB_REPLICATION_PASSWORD=aquecoucou123
+      - MARIADB_MASTER_HOST=mariadb-master
+      - MARIADB_MASTER_PORT_NUMBER=3306
+      - MARIADB_MASTER_ROOT_PASSWORD=123
+
+volumes:
+  mariadb_master_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/debian/frappe_docker/db
+  mariadb_slave_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/debian/frappe_docker/db
+configs:
+  frappe-mariadb-config_5:
+    external: true

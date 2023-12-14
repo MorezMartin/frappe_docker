@@ -1,0 +1,290 @@
+version: "3.8"
+
+services:
+  backend:
+    deploy:
+      replicas: 4
+      placement:
+        constraints:
+        - node.hostname == ns3064432
+    environment:
+      DB_HOST: frappedb_mariadb-master
+      DB_PORT: "3306"
+      REDIS_CACHE: redis-cache:6379
+      REDIS_QUEUE: redis-queue:6379
+      REDIS_SOCKETIO: redis-socketio:6379
+      SOCKETIO_PORT: "9000"
+    image: marty/erpnext-worker:v14.20.0
+    networks:
+      frappe-network: null
+    volumes:
+    - type: volume
+      source: sites
+      target: /home/frappe/frappe-bench/sites
+      volume: {}
+    - type: volume
+      source: assets
+      target: /home/frappe/frappe-bench/sites/assets
+      read_only: true
+      volume: {}
+  frontend:
+    deploy:
+      replicas: 3
+      placement:
+        constraints:
+        - node.hostname == ns3064432
+      labels:
+        traefik.docker.network: traefik_traefik-net
+        traefik.enable: "true"
+        traefik.frontend.entryPoints: https,http
+        traefik.frontend.rule: Host:test.mh-receptions.com, erpnext.mh-receptions.com
+        traefik.port: "8080"
+    environment:
+      BACKEND: backend:8000
+      FRAPPE_SITE_NAME_HEADER: $$host
+      SOCKETIO: websocket:9000
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+    image: marty/erpnext-nginx:v14.20.0
+    networks:
+      frappe-network: null
+      traefik_traefik-net: null
+    volumes:
+    - type: volume
+      source: assets
+      target: /usr/share/nginx/html/assets
+      volume: {}
+    - type: volume
+      source: sites
+      target: /usr/share/nginx/html/sites
+      volume: {}
+  queue-default:
+    command:
+    - bench
+    - worker
+    - --queue
+    - default
+    deploy:
+      replicas: 4
+      placement:
+        constraints:
+        - node.hostname == ns3064432
+    environment:
+      DB_HOST: frappedb_mariadb-master
+      DB_PORT: "3306"
+      REDIS_CACHE: redis-cache:6379
+      REDIS_QUEUE: redis-queue:6379
+      REDIS_SOCKETIO: redis-socketio:6379
+      SOCKETIO_PORT: "9000"
+    image: marty/erpnext-worker:v14.20.0
+    networks:
+      frappe-network: null
+    volumes:
+    - type: volume
+      source: sites
+      target: /home/frappe/frappe-bench/sites
+      volume: {}
+    - type: volume
+      source: assets
+      target: /home/frappe/frappe-bench/sites/assets
+      read_only: true
+      volume: {}
+  queue-long:
+    command:
+    - bench
+    - worker
+    - --queue
+    - long
+    deploy:
+      replicas: 3
+      placement:
+        constraints:
+        - node.hostname == ns3064432
+    environment:
+      DB_HOST: frappedb_mariadb-master
+      DB_PORT: "3306"
+      REDIS_CACHE: redis-cache:6379
+      REDIS_QUEUE: redis-queue:6379
+      REDIS_SOCKETIO: redis-socketio:6379
+      SOCKETIO_PORT: "9000"
+    image: marty/erpnext-worker-long:v14.20.0
+    networks:
+      frappe-network: null
+    volumes:
+    - type: volume
+      source: sites
+      target: /home/frappe/frappe-bench/sites
+      volume: {}
+    - type: volume
+      source: assets
+      target: /home/frappe/frappe-bench/sites/assets
+      read_only: true
+      volume: {}
+  queue-short:
+    command:
+    - bench
+    - worker
+    - --queue
+    - short
+    deploy:
+      replicas: 4
+      placement:
+        constraints:
+        - node.hostname == ns3064432
+    environment:
+      DB_HOST: frappedb_mariadb-master
+      DB_PORT: "3306"
+      REDIS_CACHE: redis-cache:6379
+      REDIS_QUEUE: redis-queue:6379
+      REDIS_SOCKETIO: redis-socketio:6379
+      SOCKETIO_PORT: "9000"
+    image: marty/erpnext-worker-short:v14.20.0
+    networks:
+      frappe-network: null
+    volumes:
+    - type: volume
+      source: sites
+      target: /home/frappe/frappe-bench/sites
+      volume: {}
+    - type: volume
+      source: assets
+      target: /home/frappe/frappe-bench/sites/assets
+      read_only: true
+      volume: {}
+  redis-cache:
+    image: redis:6.2-alpine
+    networks:
+      frappe-network: null
+    volumes:
+    - type: volume
+      source: redis-cache-data
+      target: /data
+      volume: {}
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+        - node.hostname == ns3064432
+  redis-queue:
+    image: redis:6.2-alpine
+    networks:
+      frappe-network: null
+    volumes:
+    - type: volume
+      source: redis-queue-data
+      target: /data
+      volume: {}
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+        - node.hostname == ns3064432
+  redis-socketio:
+    image: redis:6.2-alpine
+    networks:
+      frappe-network: null
+    volumes:
+    - type: volume
+      source: redis-socketio-data
+      target: /data
+      volume: {}
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+        - node.hostname == ns3064432
+  scheduler:
+    command:
+    - bench
+    - schedule
+    deploy:
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+        - node.hostname == ns3064432
+    environment:
+      DB_HOST: frappedb_mariadb-master
+      DB_PORT: "3306"
+      REDIS_CACHE: redis-cache:6379
+      REDIS_QUEUE: redis-queue:6379
+      REDIS_SOCKETIO: redis-socketio:6379
+      SOCKETIO_PORT: "9000"
+    image: marty/erpnext-worker:v14.20.0
+    networks:
+      frappe-network: null
+    volumes:
+    - type: volume
+      source: sites
+      target: /home/frappe/frappe-bench/sites
+      volume: {}
+    - type: volume
+      source: assets
+      target: /home/frappe/frappe-bench/sites/assets
+      read_only: true
+      volume: {}
+  websocket:
+    image: frappe/frappe-socketio:v14.22.0
+    networks:
+      frappe-network: null
+    volumes:
+    - type: volume
+      source: sites
+      target: /home/frappe/frappe-bench/sites
+      volume: {}
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+        - node.hostname == ns3064432
+networks:
+  frappe-network:
+    name: frappe-network
+    external: true
+  traefik_traefik-net:
+    name: traefik_traefik-net
+    external: true
+volumes:
+  assets:
+    name: frappe_docker_assets
+    driver: local
+    driver_opts:
+      device: /home/debian/frappe_docker/sites/assets
+      o: bind
+      type: none
+  redis-cache-data:
+    name: frappe_docker_redis-cache-data
+  redis-queue-data:
+    name: frappe_docker_redis-queue-data
+  redis-socketio-data:
+    name: frappe_docker_redis-socketio-data
+  sites:
+    name: frappe_docker_sites
+    driver: local
+    driver_opts:
+      device: /home/debian/frappe_docker/sites
+      o: bind
+      type: none
+x-backend-defaults:
+  environment:
+    DB_HOST: frappedb_mariadb-master
+    DB_PORT: "3306"
+    REDIS_CACHE: redis-cache:6379
+    REDIS_QUEUE: redis-queue:6379
+    REDIS_SOCKETIO: redis-socketio:6379
+    SOCKETIO_PORT: 9000
+  image: frappe/frappe-worker:v14.30.0
+  volumes:
+  - sites:/home/frappe/frappe-bench/sites
+  - assets:/home/frappe/frappe-bench/sites/assets:ro
+x-erpnext-backend-image:
+  deploy:
+    placement:
+      constraints:
+      - node.hostname == ns3064432
+    restart_policy:
+      condition: on-failure
+  image: marty/erpnext-worker:v14.20.0
+  networks:
+  - frappe-network

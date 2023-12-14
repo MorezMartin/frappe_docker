@@ -1,0 +1,205 @@
+version: "3.7"
+
+services:
+  redis-cache:
+    image: redis:latest
+    volumes:
+      - redis-cache-vol:/data
+    deploy:
+      placement:
+        constraints: [node.hostname == ns3064432]
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    networks:
+      - frappe-network
+
+  redis-queue:
+    image: redis:latest
+    volumes:
+      - redis-queue-vol:/data
+    deploy:
+      placement:
+        constraints: [node.hostname == ns3064432]
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    networks:
+      - frappe-network
+
+  redis-socketio:
+    image: redis:latest
+    volumes:
+      - redis-socketio-vol:/data
+    deploy:
+      placement:
+        constraints: [node.hostname == ns3064432]
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    networks:
+      - frappe-network
+
+  erpnext-nginx:
+    image: marty/erpnext-nginx:v13.31.1
+#    configs:
+#      - source: frappe-nginx-config
+#        target: /etc/nginx/conf.d/nginx/conf.d/default.conf
+    environment:
+      - BACKEND=erpnext-python:8000
+      - SOCKETIO=frappe-socketio:9000
+      - FRAPPE_SITE_NAME_HEADER=${FRAPPE_SITE_NAME_HEADER:-$host}
+      - UPSTREAM_REAL_IP_ADDRESS=${UPSTREAM_REAL_IP_ADDRESS:-10.0.3.0/24}
+      - UPSTREAM_REAL_IP_HEADER=${UPSTREAM_REAL_IP_HEADER:-X-Forwarded-For}
+      - UPSTREAM_REAL_IP_RECURSIVE=${UPSTREAM_REAL_IP_RECURSIVE:-off}
+    volumes:
+      - sites-vol:/usr/share/nginx/html/sites:rw
+      - assets-vol:/usr/share/nginx/html/assets:rw
+    networks:
+      - frappe-network
+      - traefik_traefik-net
+    deploy:
+      replicas: 3
+      placement:
+        constraints: [node.hostname == ns3064432]
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.port=8080"
+        - "traefik.docker.network=traefik_traefik-net"
+        - "traefik.frontend.rule=Host:test.mh-receptions.com, erpnext.mh-receptions.com"
+        - "traefik.frontend.entryPoints=https,http"
+
+
+  erpnext-python:
+    image: marty/erpnext-worker:v13.31.1
+    deploy:
+      replicas: 2
+      placement:
+        constraints: [node.hostname == ns3064432]
+      restart_policy:
+        condition: on-failure
+    environment:
+      - MARIADB_HOST=frappedb_mariadb-master
+      - REDIS_CACHE=redis-cache:6379
+      - REDIS_QUEUE=redis-queue:6379
+      - REDIS_SOCKETIO=redis-socketio:6379
+      - SOCKETIO_PORT=9000
+      - AUTO_MIGRATE=1
+      - WORKERS=5
+      - WORKER_CLASS=gevent
+    volumes:
+      - sites-vol:/home/frappe/frappe-bench/sites:rw
+      - assets-vol:/home/frappe/frappe-bench/sites/assets:rw
+    networks:
+      - frappe-network
+
+  frappe-socketio:
+    image: frappe/frappe-socketio:v13.31.0
+    deploy:
+      replicas: 2
+      placement:
+        constraints: [node.hostname == ns3064432]
+      restart_policy:
+        condition: on-failure
+    environment:
+      - WORKERS=5
+    volumes:
+      - sites-vol:/home/frappe/frappe-bench/sites:rw
+    networks:
+      - frappe-network
+
+  erpnext-worker-default:
+    image: marty/erpnext-worker:v13.31.1
+    deploy:
+      replicas: 3
+      placement:
+        constraints: [node.hostname == ns3064432]
+      restart_policy:
+        condition: on-failure
+    environment:
+      - WORKERS=5
+      - WORKER_CLASS=gevent
+    command: bench worker --queue default
+    volumes:
+      - sites-vol:/home/frappe/frappe-bench/sites:rw
+    networks:
+      - frappe-network
+
+  erpnext-worker-short:
+    image: marty/erpnext-worker:v13.31.1
+    deploy:
+      replicas: 2
+      placement:
+        constraints: [node.hostname == ns3064432]
+      restart_policy:
+        condition: on-failure
+    command: bench worker --queue short
+    environment:
+      - WORKER_TYPE=short
+      - WORKERS=5
+      - WORKER_CLASS=gevent
+    volumes:
+      - sites-vol:/home/frappe/frappe-bench/sites:rw
+    networks:
+      - frappe-network
+
+  erpnext-worker-long:
+    image: marty/erpnext-worker:v13.31.1
+    deploy:
+      placement:
+        constraints: [node.hostname == ns3064432]
+      restart_policy:
+        condition: on-failure
+    command: bench worker --queue long
+    environment:
+      - WORKER_TYPE=long
+      - WORKERS=2
+    volumes:
+      - sites-vol:/home/frappe/frappe-bench/sites:rw
+    networks:
+      - frappe-network
+
+  frappe-schedule:
+    image: marty/erpnext-worker:v13.31.1
+    deploy:
+      placement:
+        constraints: [node.hostname == ns3064432]
+      restart_policy:
+        condition: on-failure
+    environment:
+      - WORKER_TYPE=long
+      - WORKERS=2
+    command: bench schedule
+    volumes:
+      - sites-vol:/home/frappe/frappe-bench/sites:rw
+    networks:
+      - frappe-network
+
+volumes:
+  redis-cache-vol:
+  redis-queue-vol:
+  redis-socketio-vol:
+  assets-vol:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/debian/frappe_docker/sites/assets
+  sites-vol:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/debian/frappe_docker/sites
+
+#configs:
+#  frappe-nginx-config:
+#    external: true
+
+networks:
+  traefik_traefik-net:
+    external: true
+  frappe-network:
+    external: true

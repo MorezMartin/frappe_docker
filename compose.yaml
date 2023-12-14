@@ -1,27 +1,18 @@
-x-depends-on-configurator: &depends_on_configurator
-  depends_on:
-    configurator:
-      condition: service_completed_successfully
 
 x-backend-defaults: &backend_defaults
-  <<: *depends_on_configurator
   image: frappe/frappe-worker:${FRAPPE_VERSION:?No Frappe version set}
   volumes:
     - sites:/home/frappe/frappe-bench/sites
     - assets:/home/frappe/frappe-bench/sites/assets:ro
+  environment:
+    DB_HOST: ${DB_HOST}
+    DB_PORT: ${DB_PORT}
+    REDIS_CACHE: ${REDIS_CACHE}
+    REDIS_QUEUE: ${REDIS_QUEUE}
+    REDIS_SOCKETIO: ${REDIS_SOCKETIO}
+    SOCKETIO_PORT: 9000
 
 services:
-  configurator:
-    <<: *backend_defaults
-    command: configure.py
-    environment:
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      REDIS_CACHE: ${REDIS_CACHE}
-      REDIS_QUEUE: ${REDIS_QUEUE}
-      REDIS_SOCKETIO: ${REDIS_SOCKETIO}
-      SOCKETIO_PORT: 9000
-    depends_on: {}
 
   backend:
     <<: *backend_defaults
@@ -35,16 +26,16 @@ services:
       UPSTREAM_REAL_IP_ADDRESS: ${UPSTREAM_REAL_IP_ADDRESS:-127.0.0.1}
       UPSTREAM_REAL_IP_HEADER: ${UPSTREAM_REAL_IP_HEADER:-X-Forwarded-For}
       UPSTREAM_REAL_IP_RECURSIVE: ${UPSTREAM_REAL_IP_RECURSIVE:-off}
+    networks:
+      - frappe-network
     volumes:
       - sites:/usr/share/nginx/html/sites
       - assets:/usr/share/nginx/html/assets
-    depends_on:
-      - backend
-      - websocket
 
   websocket:
-    <<: *depends_on_configurator
     image: frappe/frappe-socketio:${FRAPPE_VERSION}
+    networks:
+      - frappe-network
     volumes:
       - sites:/home/frappe/frappe-bench/sites
 
@@ -66,5 +57,21 @@ services:
 
 # ERPNext requires local assets access (Frappe does not)
 volumes:
-  sites:
   assets:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/debian/frappe_docker/sites/assets
+  sites:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/debian/frappe_docker/sites
+
+networks:
+  traefik_traefik-net:
+    external: true
+  frappe-network:
+    external: true

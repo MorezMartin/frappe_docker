@@ -127,7 +127,7 @@ CMD [ "/home/frappe/frappe-bench/env/bin/gunicorn", \
   "--workers=5", \
   "--worker-class=gevent", \
   "--worker-tmp-dir=/dev/shm", \
-  "--timeout=120", \
+  "--timeout=300", \
   "--log-level=debug", \
   "frappe.app:application" \
 ]

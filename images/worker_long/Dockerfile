@@ -123,11 +123,11 @@ WORKDIR /home/frappe/frappe-bench/sites
 
 CMD [ "/home/frappe/frappe-bench/env/bin/gunicorn", \
   "--bind=0.0.0.0:8000", \
-  "--threads=4", \
-  "--workers=5", \
+  "--threads=1", \
+  "--workers=3", \
   "--worker-class=gevent", \
   "--worker-tmp-dir=/dev/shm", \
-  "--timeout=120", \
+  "--timeout=3600", \
   "--log-level=debug", \
   "frappe.app:application" \
 ]
