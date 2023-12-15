@@ -1,9 +1,9 @@
-FROM debian:bookworm-slim as bench
+FROM debian:bullseye-slim as bench
 
 LABEL author=frappé
 
-ARG GIT_REPO=https://github.com/frappe/bench.git
-ARG GIT_BRANCH=v5.x
+ARG BENCH_REPO
+ARG BENCH_BRANCH=develop
 
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
@@ -13,16 +13,14 @@ RUN apt-get update \
     postgresql-client \
     gettext-base \
     wget \
+    # for ERPNext v12
+    # TODO: Remove after v12 is deprecated
+    python2 \
     # for PDF
     libssl-dev \
     fonts-cantarell \
     xfonts-75dpi \
     xfonts-base \
-    # weasyprint dependencies
-    libpango-1.0-0 \
-    libharfbuzz0b \
-    libpangoft2-1.0-0 \
-    libpangocairo-1.0-0 \
     # to work inside the container
     locales \
     build-essential \
@@ -53,33 +51,16 @@ RUN apt-get update \
     ssh-client \
     # VSCode container requirements
     net-tools \
-    # For pyenv build dependencies
-    # https://github.com/frappe/frappe_docker/issues/840#issuecomment-1185206895
-    make \
-    # For pandas
-    libbz2-dev \
-    # For bench execute
-    libsqlite3-dev \
-    # For other dependencies
-    zlib1g-dev \
-    libreadline-dev \
-    llvm \
-    libncurses5-dev \
-    libncursesw5-dev \
-    xz-utils \
-    tk-dev \
-    liblzma-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
     && dpkg-reconfigure --frontend=noninteractive locales
 
 # Detect arch and install wkhtmltopdf
-ARG WKHTMLTOPDF_VERSION=0.12.6.1-3
-ARG WKHTMLTOPDF_DISTRO=bookworm
+ENV WKHTMLTOPDF_VERSION 0.12.6-1
 RUN if [ "$(uname -m)" = "aarch64" ]; then export ARCH=arm64; fi \
     && if [ "$(uname -m)" = "x86_64" ]; then export ARCH=amd64; fi \
-    && downloaded_file=wkhtmltox_${WKHTMLTOPDF_VERSION}.${WKHTMLTOPDF_DISTRO}_${ARCH}.deb \
+    && downloaded_file=wkhtmltox_$WKHTMLTOPDF_VERSION.buster_${ARCH}.deb \
     && wget -q https://github.com/wkhtmltopdf/packaging/releases/download/$WKHTMLTOPDF_VERSION/$downloaded_file \
     && dpkg -i $downloaded_file \
     && rm $downloaded_file
@@ -95,18 +76,18 @@ USER frappe
 WORKDIR /home/frappe
 
 # Install Python via pyenv
-ENV PYTHON_VERSION_V14=3.10.13
-ENV PYTHON_VERSION=3.11.6
+# Python 3.7 sits here for ERPNext version-12
+# TODO: Remove Python 3.7 when version-12 will not be supported
+ENV PYTHON_VERSION_V12=3.7.12
+ENV PYTHON_VERSION=3.9.9
 ENV PYENV_ROOT /home/frappe/.pyenv
 ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
 
 # From https://github.com/pyenv/pyenv#basic-github-checkout
 RUN git clone --depth 1 https://github.com/pyenv/pyenv.git .pyenv \
-    && pyenv install $PYTHON_VERSION_V14 \
+    && pyenv install $PYTHON_VERSION_V12 \
     && pyenv install $PYTHON_VERSION \
-    && PYENV_VERSION=$PYTHON_VERSION_V14 pip install --no-cache-dir virtualenv \
-    && PYENV_VERSION=$PYTHON_VERSION pip install --no-cache-dir virtualenv \
-    && pyenv global $PYTHON_VERSION $PYTHON_VERSION_v14 \
+    && pyenv global $PYTHON_VERSION $PYTHON_VERSION_V12 \
     && sed -Ei -e '/^([^#]|$)/ {a export PYENV_ROOT="/home/frappe/.pyenv" a export PATH="$PYENV_ROOT/bin:$PATH" a ' -e ':a' -e '$!{n;ba};}' ~/.profile \
     && echo 'eval "$(pyenv init --path)"' >>~/.profile \
     && echo 'eval "$(pyenv init -)"' >>~/.bashrc
@@ -116,21 +97,21 @@ RUN git clone --depth 1 https://github.com/pyenv/pyenv.git .pyenv \
 ENV PATH /home/frappe/.local/bin:$PATH
 # Skip editable-bench warning
 # https://github.com/frappe/bench/commit/20560c97c4246b2480d7358c722bc9ad13606138
-RUN git clone ${GIT_REPO} --depth 1 -b ${GIT_BRANCH} .bench \
-    && pip install --no-cache-dir --user -e .bench \
+RUN git clone ${BENCH_REPO} --depth 1 -b ${BENCH_BRANCH} .bench \
+    && pip install --user -e .bench \
     && echo "export PATH=/home/frappe/.local/bin:\$PATH" >>/home/frappe/.bashrc \
     && echo "export BENCH_DEVELOPER=1" >>/home/frappe/.bashrc
 
 # Install Node via nvm
-ENV NODE_VERSION_14=16.20.2
-ENV NODE_VERSION=18.18.2
+ENV NODE_VERSION=14.18.1
+ENV NODE_VERSION_FRAPPEV11=10.24.1
 ENV NVM_DIR /home/frappe/.nvm
 ENV PATH ${NVM_DIR}/versions/node/v${NODE_VERSION}/bin/:${PATH}
 
-RUN wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash \
+RUN wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash \
     && . ${NVM_DIR}/nvm.sh \
-    && nvm install ${NODE_VERSION_14} \
-    && nvm use v${NODE_VERSION_14} \
+    && nvm install ${NODE_VERSION_FRAPPEV11} \
+    && nvm use v${NODE_VERSION_FRAPPEV11} \
     && npm install -g yarn \
     && nvm install ${NODE_VERSION} \
     && nvm use v${NODE_VERSION} \
