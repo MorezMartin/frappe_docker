@@ -1,36 +1,38 @@
+# How to install ERPNext on linux/mac using Frappe_docker ?
+
+step1: clone the repo
+
+```
+git clone https://github.com/frappe/frappe_docker
+```
+
+step2: add platform: linux/amd64 to all services in the /pwd.yaml
+
+here is the update pwd.yml file
+
+```yml
 version: "3"
 
 services:
   backend:
-<<<<<<< HEAD
-    image: marty/erpnext-worker:v14.6.0
-=======
-    image: frappe/erpnext:v15.6.1
->>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
+    image: frappe/erpnext:v14
+    platform: linux/amd64
     deploy:
       restart_policy:
         condition: on-failure
     volumes:
-<<<<<<< HEAD
-      - t-sites:/home/frappe/frappe-bench/sites
-      - t-assets:/home/frappe/frappe-bench/sites/assets
-
-  configurator:
-    image: marty/erpnext-worker:v14.6.0
-=======
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
 
   configurator:
-    image: frappe/erpnext:v15.6.1
+    image: frappe/erpnext:v14
+    platform: linux/amd64
     deploy:
       restart_policy:
         condition: none
     entrypoint:
       - bash
       - -c
-    # add redis_socketio for backward compatibility
->>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
     command:
       - >
         ls -1 apps > sites/apps.txt;
@@ -38,7 +40,6 @@ services:
         bench set-config -gp db_port $$DB_PORT;
         bench set-config -g redis_cache "redis://$$REDIS_CACHE";
         bench set-config -g redis_queue "redis://$$REDIS_QUEUE";
-        bench set-config -g redis_socketio "redis://$$REDIS_QUEUE";
         bench set-config -gp socketio_port $$SOCKETIO_PORT;
     environment:
       DB_HOST: db
@@ -47,29 +48,18 @@ services:
       REDIS_QUEUE: redis-queue:6379
       SOCKETIO_PORT: "9000"
     volumes:
-<<<<<<< HEAD
-      - t-sites:/home/frappe/frappe-bench/sites
-
-  create-site:
-    image: marty/erpnext-worker:v14.6.0
-=======
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
 
   create-site:
-    image: frappe/erpnext:v15.6.1
->>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
+    image: frappe/erpnext:v14
+    platform: linux/amd64
     deploy:
       restart_policy:
         condition: none
     volumes:
-<<<<<<< HEAD
-      - t-sites:/home/frappe/frappe-bench/sites
-      - t-assets:/home/frappe/frappe-bench/sites/assets
-=======
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
->>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
     entrypoint:
       - bash
       - -c
@@ -95,6 +85,7 @@ services:
 
   db:
     image: mariadb:10.6
+    platform: linux/amd64
     healthcheck:
       test: mysqladmin ping -h localhost --password=admin
       interval: 1s
@@ -113,11 +104,8 @@ services:
       - db-data:/var/lib/mysql
 
   frontend:
-<<<<<<< HEAD
-    image: marty/erpnext-nginx:v14.6.0
-=======
-    image: frappe/erpnext:v15.6.1
->>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
+    image: frappe/erpnext:v14
+    platform: linux/amd64
     deploy:
       restart_policy:
         condition: on-failure
@@ -133,37 +121,14 @@ services:
       PROXY_READ_TIMEOUT: 120
       CLIENT_MAX_BODY_SIZE: 50m
     volumes:
-<<<<<<< HEAD
-      - t-sites:/usr/share/nginx/html/sites
-      - t-assets:/usr/share/nginx/html/assets
-    ports:
-      - "8080:8080"
-
-  queue-default:
-    image: marty/erpnext-worker:v14.6.0
-    deploy:
-      restart_policy:
-        condition: on-failure
-    command:
-      - bench
-      - worker
-      - --queue
-      - default
-    volumes:
-      - t-sites:/home/frappe/frappe-bench/sites
-      - t-assets:/home/frappe/frappe-bench/sites/assets
-
-  queue-long:
-    image: marty/erpnext-worker:v14.6.0
-=======
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
     ports:
       - "8080:8080"
 
   queue-long:
-    image: frappe/erpnext:v15.6.1
->>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
+    image: frappe/erpnext:v14
+    platform: linux/amd64
     deploy:
       restart_policy:
         condition: on-failure
@@ -171,21 +136,14 @@ services:
       - bench
       - worker
       - --queue
-      - long,default,short
+      - long
     volumes:
-<<<<<<< HEAD
-      - t-sites:/home/frappe/frappe-bench/sites
-      - t-assets:/home/frappe/frappe-bench/sites/assets
-
-  queue-short:
-    image: marty/erpnext-worker:v14.6.0
-=======
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
 
   queue-short:
-    image: frappe/erpnext:v15.6.1
->>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
+    image: frappe/erpnext:v14
+    platform: linux/amd64
     deploy:
       restart_policy:
         condition: on-failure
@@ -193,18 +151,14 @@ services:
       - bench
       - worker
       - --queue
-      - short,default
+      - short
     volumes:
-<<<<<<< HEAD
-      - t-sites:/home/frappe/frappe-bench/sites
-      - t-assets:/home/frappe/frappe-bench/sites/assets
-=======
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
->>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
 
   redis-queue:
     image: redis:6.2-alpine
+    platform: linux/amd64
     deploy:
       restart_policy:
         condition: on-failure
@@ -213,6 +167,7 @@ services:
 
   redis-cache:
     image: redis:6.2-alpine
+    platform: linux/amd64
     deploy:
       restart_policy:
         condition: on-failure
@@ -220,11 +175,8 @@ services:
       - redis-cache-data:/data
 
   scheduler:
-<<<<<<< HEAD
-    image: marty/erpnext-worker:v14.6.0
-=======
-    image: frappe/erpnext:v15.6.1
->>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
+    image: frappe/erpnext:v14
+    platform: linux/amd64
     deploy:
       restart_policy:
         condition: on-failure
@@ -232,16 +184,12 @@ services:
       - bench
       - schedule
     volumes:
-<<<<<<< HEAD
-      - t-sites:/home/frappe/frappe-bench/sites
-      - t-assets:/home/frappe/frappe-bench/sites/assets
-=======
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
->>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
 
   websocket:
-    image: frappe/erpnext:v15.6.1
+    image: frappe/erpnext:v14
+    platform: linux/amd64
     deploy:
       restart_policy:
         condition: on-failure
@@ -249,18 +197,6 @@ services:
       - node
       - /home/frappe/frappe-bench/apps/frappe/socketio.js
     volumes:
-<<<<<<< HEAD
-      - t-sites:/home/frappe/frappe-bench/sites
-      - t-assets:/home/frappe/frappe-bench/sites/assets
-
-volumes:
-  t-assets:
-  db-data:
-  redis-queue-data:
-  redis-cache-data:
-  redis-socketio-data:
-  t-sites:
-=======
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
 
@@ -270,4 +206,20 @@ volumes:
   redis-cache-data:
   sites:
   logs:
->>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
+```
+
+step3: run the docker
+
+```
+cd frappe_docker
+```
+
+```
+docker-compose -f ./pwd.yml up
+```
+
+---
+
+Wait for couple of minutes.
+
+Open localhost:8080

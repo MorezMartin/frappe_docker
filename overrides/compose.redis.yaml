@@ -1,4 +1,15 @@
 services:
+<<<<<<< HEAD
+=======
+  configurator:
+    environment:
+      REDIS_CACHE: redis-cache:6379
+      REDIS_QUEUE: redis-queue:6379
+    depends_on:
+      - redis-cache
+      - redis-queue
+
+>>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
   redis-cache:
     image: redis:6.2-alpine
     networks:
@@ -8,6 +19,7 @@ services:
 
   redis-queue:
     image: redis:6.2-alpine
+<<<<<<< HEAD
     networks:
       - frappe-network
     volumes:
@@ -19,8 +31,15 @@ services:
       - frappe-network
     volumes:
       - redis-cache-data:/data
+=======
+    volumes:
+      - redis-queue-data:/data
+>>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
 
 volumes:
   redis-cache-data:
   redis-queue-data:
+<<<<<<< HEAD
   redis-socketio-data:
+=======
+>>>>>>> dba13b4fda4531c9b08b09d6665120c154f63cd8
